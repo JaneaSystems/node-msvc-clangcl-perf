@@ -1,20 +1,36 @@
-// Benchmark comparison: MSVC vs ClangCL compiled Node.js binaries
-// Run with: node benchmark_compare.js <msvc-binary> <clang-binary>
+// Benchmark comparison: two compiled Node.js binaries
+// Run with: node benchmark_compare.js <binary-a> <binary-b>
 
-const { execFileSync, spawnSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+const { execFileSync, spawnSync } = require("child_process");
+const fs = require("fs");
+const path = require("path");
+const os = require("os");
 
 const args = process.argv.slice(2);
 if (args.length !== 2) {
-  console.error('Usage: node benchmark_compare.js <path-to-msvc-binary> <path-to-clang-binary>');
+  console.error(
+    "Usage: node benchmark_compare.js <path-to-binary-a> <path-to-binary-b>",
+  );
   process.exit(1);
 }
-const MSVC_BIN = path.resolve(args[0]);
-const CLANG_BIN = path.resolve(args[1]);
-if (!fs.existsSync(MSVC_BIN)) { console.error(`MSVC binary not found: ${MSVC_BIN}`); process.exit(1); }
-if (!fs.existsSync(CLANG_BIN)) { console.error(`ClangCL binary not found: ${CLANG_BIN}`); process.exit(1); }
+
+const BIN_A = path.resolve(args[0]);
+const BIN_B = path.resolve(args[1]);
+if (!fs.existsSync(BIN_A)) {
+  console.error(`Binary not found: ${BIN_A}`);
+  process.exit(1);
+}
+if (!fs.existsSync(BIN_B)) {
+  console.error(`Binary not found: ${BIN_B}`);
+  process.exit(1);
+}
+
+function getBinaryName(binPath) {
+  // Strip directory and extension (handles .exe on Windows, any extension on Linux)
+  return path.basename(binPath).replace(/\.[^.]+$/, "");
+}
+const NAME_A = getBinaryName(BIN_A);
+const NAME_B = getBinaryName(BIN_B);
 
 const ITERATIONS = 30; // per benchmark
 const WARMUP = 10;
@@ -33,134 +49,136 @@ function mean(arr) {
 
 function stddev(arr) {
   const m = mean(arr);
-  return Math.sqrt(arr.reduce((sum, v) => sum + (v - m) ** 2, 0) / (arr.length - 1));
+  return Math.sqrt(
+    arr.reduce((sum, v) => sum + (v - m) ** 2, 0) / (arr.length - 1),
+  );
 }
 
 function formatBytes(bytes) {
-  if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + ' MB';
-  if (bytes >= 1024) return (bytes / 1024).toFixed(2) + ' KB';
-  return bytes + ' B';
+  if (bytes >= 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  if (bytes >= 1024) return (bytes / 1024).toFixed(2) + " KB";
+  return bytes + " B";
 }
 
 function formatMs(ms) {
-  return ms.toFixed(2) + ' ms';
+  return ms.toFixed(2) + " ms";
 }
 
-function pctDiff(msvc, clang) {
-  const diff = ((clang - msvc) / msvc) * 100;
-  const sign = diff > 0 ? '+' : '';
-  return sign + diff.toFixed(2) + '%';
+function pctDiff(a, b) {
+  const diff = ((b - a) / a) * 100;
+  const sign = diff > 0 ? "+" : "";
+  return sign + diff.toFixed(2) + "%";
 }
 
-function winner(msvcVal, clangVal, lowerIsBetter = true, msvcStd = 0, clangStd = 0) {
-  if (msvcStd > 0 || clangStd > 0) {
-    if (Math.abs(msvcVal - clangVal) < Math.max(msvcStd, clangStd)) return '~Tie';
+function winner(aVal, bVal, lowerIsBetter = true, aStd = 0, bStd = 0) {
+  if (aStd > 0 || bStd > 0) {
+    if (Math.abs(aVal - bVal) < Math.max(aStd, bStd)) return "~Tie";
   }
-  if (lowerIsBetter) return msvcVal < clangVal ? 'MSVC' : msvcVal > clangVal ? 'ClangCL' : 'Tie';
-  return msvcVal > clangVal ? 'MSVC' : msvcVal < clangVal ? 'ClangCL' : 'Tie';
+  if (lowerIsBetter) return aVal < bVal ? NAME_A : aVal > bVal ? NAME_B : "Tie";
+  return aVal > bVal ? NAME_A : aVal < bVal ? NAME_B : "Tie";
 }
 
-function runTimed(bin, args, options = {}) {
+function runTimed(bin, binArgs, options = {}) {
   const start = process.hrtime.bigint();
-  const result = spawnSync(bin, args, { 
-    encoding: 'utf8', 
+  const result = spawnSync(bin, binArgs, {
+    encoding: "utf8",
     timeout: 60000,
     windowsHide: true,
-    ...options 
+    ...options,
   });
   const end = process.hrtime.bigint();
-  return { 
-    durationMs: Number(end - start) / 1e6, 
-    stdout: result.stdout || '',
-    stderr: result.stderr || '',
-    status: result.status 
+  return {
+    durationMs: Number(end - start) / 1e6,
+    stdout: result.stdout || "",
+    stderr: result.stderr || "",
+    status: result.status,
   };
 }
 
-function runBothTimed(args, options = {}) {
+function runBothTimed(binArgs, options = {}) {
   if (Math.random() < 0.5) {
-    const msvc = runTimed(MSVC_BIN, args, options);
-    const clang = runTimed(CLANG_BIN, args, options);
-    return { msvc, clang };
+    const a = runTimed(BIN_A, binArgs, options);
+    const b = runTimed(BIN_B, binArgs, options);
+    return { a, b };
   } else {
-    const clang = runTimed(CLANG_BIN, args, options);
-    const msvc = runTimed(MSVC_BIN, args, options);
-    return { msvc, clang };
+    const b = runTimed(BIN_B, binArgs, options);
+    const a = runTimed(BIN_A, binArgs, options);
+    return { a, b };
   }
 }
 
 // ─── Benchmarks ────────────────────────────────────────────────────────────────
 
 function benchBinarySize() {
-  const msvcSize = fs.statSync(MSVC_BIN).size;
-  const clangSize = fs.statSync(CLANG_BIN).size;
+  const sizeA = fs.statSync(BIN_A).size;
+  const sizeB = fs.statSync(BIN_B).size;
   return {
-    name: 'Binary Size',
-    msvc: msvcSize,
-    clang: clangSize,
-    msvcFmt: formatBytes(msvcSize),
-    clangFmt: formatBytes(clangSize),
-    diff: pctDiff(msvcSize, clangSize),
-    winner: winner(msvcSize, clangSize),
-    unit: 'bytes',
+    name: "Binary Size",
+    a: sizeA,
+    b: sizeB,
+    aFmt: formatBytes(sizeA),
+    bFmt: formatBytes(sizeB),
+    diff: pctDiff(sizeA, sizeB),
+    winner: winner(sizeA, sizeB),
+    unit: "bytes",
     lowerIsBetter: true,
   };
 }
 
 function benchStartupTime() {
-  const times = { msvc: [], clang: [] };
-  
+  const times = { a: [], b: [] };
+
   // Warmup
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', '0']);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", "0"]);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc, clang } = runBothTimed(['-e', '0']);
-    times.msvc.push(msvc.durationMs);
-    times.clang.push(clang.durationMs);
+    const { a, b } = runBothTimed(["-e", "0"]);
+    times.a.push(a.durationMs);
+    times.b.push(b.durationMs);
   }
 
-  const msvcMed = median(times.msvc);
-  const clangMed = median(times.clang);
+  const medA = median(times.a);
+  const medB = median(times.b);
   return {
     name: 'Startup Time (node -e "0")',
-    msvc: msvcMed,
-    clang: clangMed,
-    msvcFmt: formatMs(msvcMed),
-    clangFmt: formatMs(clangMed),
-    msvcStd: formatMs(stddev(times.msvc)),
-    clangStd: formatMs(stddev(times.clang)),
-    diff: pctDiff(msvcMed, clangMed),
-    winner: winner(msvcMed, clangMed, true, stddev(times.msvc), stddev(times.clang)),
-    unit: 'ms',
+    a: medA,
+    b: medB,
+    aFmt: formatMs(medA),
+    bFmt: formatMs(medB),
+    aStd: formatMs(stddev(times.a)),
+    bStd: formatMs(stddev(times.b)),
+    diff: pctDiff(medA, medB),
+    winner: winner(medA, medB, true, stddev(times.a), stddev(times.b)),
+    unit: "ms",
     lowerIsBetter: true,
   };
 }
 
 function benchRequireFS() {
   const code = `const fs = require('fs'); process.exit(0);`;
-  const times = { msvc: [], clang: [] };
+  const times = { a: [], b: [] };
 
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', code]);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", code]);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc, clang } = runBothTimed(['-e', code]);
-    times.msvc.push(msvc.durationMs);
-    times.clang.push(clang.durationMs);
+    const { a, b } = runBothTimed(["-e", code]);
+    times.a.push(a.durationMs);
+    times.b.push(b.durationMs);
   }
 
-  const msvcMed = median(times.msvc);
-  const clangMed = median(times.clang);
+  const medA = median(times.a);
+  const medB = median(times.b);
   return {
     name: 'require("fs") + exit',
-    msvc: msvcMed,
-    clang: clangMed,
-    msvcFmt: formatMs(msvcMed),
-    clangFmt: formatMs(clangMed),
-    msvcStd: formatMs(stddev(times.msvc)),
-    clangStd: formatMs(stddev(times.clang)),
-    diff: pctDiff(msvcMed, clangMed),
-    winner: winner(msvcMed, clangMed, true, stddev(times.msvc), stddev(times.clang)),
-    unit: 'ms',
+    a: medA,
+    b: medB,
+    aFmt: formatMs(medA),
+    bFmt: formatMs(medB),
+    aStd: formatMs(stddev(times.a)),
+    bStd: formatMs(stddev(times.b)),
+    diff: pctDiff(medA, medB),
+    winner: winner(medA, medB, true, stddev(times.a), stddev(times.b)),
+    unit: "ms",
     lowerIsBetter: true,
   };
 }
@@ -179,29 +197,29 @@ function benchRequireHeavy() {
     require('events');
     process.exit(0);
   `;
-  const times = { msvc: [], clang: [] };
+  const times = { a: [], b: [] };
 
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', code]);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", code]);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc, clang } = runBothTimed(['-e', code]);
-    times.msvc.push(msvc.durationMs);
-    times.clang.push(clang.durationMs);
+    const { a, b } = runBothTimed(["-e", code]);
+    times.a.push(a.durationMs);
+    times.b.push(b.durationMs);
   }
 
-  const msvcMed = median(times.msvc);
-  const clangMed = median(times.clang);
+  const medA = median(times.a);
+  const medB = median(times.b);
   return {
-    name: 'Require 10 core modules',
-    msvc: msvcMed,
-    clang: clangMed,
-    msvcFmt: formatMs(msvcMed),
-    clangFmt: formatMs(clangMed),
-    msvcStd: formatMs(stddev(times.msvc)),
-    clangStd: formatMs(stddev(times.clang)),
-    diff: pctDiff(msvcMed, clangMed),
-    winner: winner(msvcMed, clangMed, true, stddev(times.msvc), stddev(times.clang)),
-    unit: 'ms',
+    name: "Require 10 core modules",
+    a: medA,
+    b: medB,
+    aFmt: formatMs(medA),
+    bFmt: formatMs(medB),
+    aStd: formatMs(stddev(times.a)),
+    bStd: formatMs(stddev(times.b)),
+    diff: pctDiff(medA, medB),
+    winner: winner(medA, medB, true, stddev(times.a), stddev(times.b)),
+    unit: "ms",
     lowerIsBetter: true,
   };
 }
@@ -210,67 +228,103 @@ function benchMemoryStartup() {
   // Measure RSS after startup using a self-reporting script
   const code = `setTimeout(() => { const m = process.memoryUsage(); console.log(JSON.stringify(m)); }, 100);`;
 
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', code]);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", code]);
 
-  const msvcMem = [];
-  const clangMem = [];
+  const memA = [];
+  const memB = [];
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc: msvcR, clang: clangR } = runBothTimed(['-e', code]);
-    try { msvcMem.push(JSON.parse(msvcR.stdout.trim())); } catch {}
-    try { clangMem.push(JSON.parse(clangR.stdout.trim())); } catch {}
+    const { a: aR, b: bR } = runBothTimed(["-e", code]);
+    try {
+      memA.push(JSON.parse(aR.stdout.trim()));
+    } catch {}
+    try {
+      memB.push(JSON.parse(bR.stdout.trim()));
+    } catch {}
   }
 
-  const msvcRSS = median(msvcMem.map(m => m.rss));
-  const clangRSS = median(clangMem.map(m => m.rss));
-  const msvcHeap = median(msvcMem.map(m => m.heapUsed));
-  const clangHeap = median(clangMem.map(m => m.heapUsed));
-  const msvcHeapTotal = median(msvcMem.map(m => m.heapTotal));
-  const clangHeapTotal = median(clangMem.map(m => m.heapTotal));
-  const msvcExternal = median(msvcMem.map(m => m.external));
-  const clangExternal = median(clangMem.map(m => m.external));
+  const aRSS = median(memA.map((m) => m.rss));
+  const bRSS = median(memB.map((m) => m.rss));
+  const aHeap = median(memA.map((m) => m.heapUsed));
+  const bHeap = median(memB.map((m) => m.heapUsed));
+  const aHeapTotal = median(memA.map((m) => m.heapTotal));
+  const bHeapTotal = median(memB.map((m) => m.heapTotal));
+  const aExternal = median(memA.map((m) => m.external));
+  const bExternal = median(memB.map((m) => m.external));
 
-  const msvcRSSArr = msvcMem.map(m => m.rss);
-  const clangRSSArr = clangMem.map(m => m.rss);
-  const msvcHeapArr = msvcMem.map(m => m.heapUsed);
-  const clangHeapArr = clangMem.map(m => m.heapUsed);
-  const msvcHeapTotalArr = msvcMem.map(m => m.heapTotal);
-  const clangHeapTotalArr = clangMem.map(m => m.heapTotal);
-  const msvcExternalArr = msvcMem.map(m => m.external);
-  const clangExternalArr = clangMem.map(m => m.external);
+  const aRSSArr = memA.map((m) => m.rss);
+  const bRSSArr = memB.map((m) => m.rss);
+  const aHeapArr = memA.map((m) => m.heapUsed);
+  const bHeapArr = memB.map((m) => m.heapUsed);
+  const aHeapTotalArr = memA.map((m) => m.heapTotal);
+  const bHeapTotalArr = memB.map((m) => m.heapTotal);
+  const aExternalArr = memA.map((m) => m.external);
+  const bExternalArr = memB.map((m) => m.external);
 
   return [
     {
-      name: 'Memory: RSS at startup',
-      msvc: msvcRSS, clang: clangRSS,
-      msvcFmt: formatBytes(msvcRSS), clangFmt: formatBytes(clangRSS),
-      msvcStd: formatBytes(stddev(msvcRSSArr)), clangStd: formatBytes(stddev(clangRSSArr)),
-      diff: pctDiff(msvcRSS, clangRSS), winner: winner(msvcRSS, clangRSS, true, stddev(msvcRSSArr), stddev(clangRSSArr)),
-      unit: 'bytes', lowerIsBetter: true,
+      name: "Memory: RSS at startup",
+      a: aRSS,
+      b: bRSS,
+      aFmt: formatBytes(aRSS),
+      bFmt: formatBytes(bRSS),
+      aStd: formatBytes(stddev(aRSSArr)),
+      bStd: formatBytes(stddev(bRSSArr)),
+      diff: pctDiff(aRSS, bRSS),
+      winner: winner(aRSS, bRSS, true, stddev(aRSSArr), stddev(bRSSArr)),
+      unit: "bytes",
+      lowerIsBetter: true,
     },
     {
-      name: 'Memory: Heap Used at startup',
-      msvc: msvcHeap, clang: clangHeap,
-      msvcFmt: formatBytes(msvcHeap), clangFmt: formatBytes(clangHeap),
-      msvcStd: formatBytes(stddev(msvcHeapArr)), clangStd: formatBytes(stddev(clangHeapArr)),
-      diff: pctDiff(msvcHeap, clangHeap), winner: winner(msvcHeap, clangHeap, true, stddev(msvcHeapArr), stddev(clangHeapArr)),
-      unit: 'bytes', lowerIsBetter: true,
+      name: "Memory: Heap Used at startup",
+      a: aHeap,
+      b: bHeap,
+      aFmt: formatBytes(aHeap),
+      bFmt: formatBytes(bHeap),
+      aStd: formatBytes(stddev(aHeapArr)),
+      bStd: formatBytes(stddev(bHeapArr)),
+      diff: pctDiff(aHeap, bHeap),
+      winner: winner(aHeap, bHeap, true, stddev(aHeapArr), stddev(bHeapArr)),
+      unit: "bytes",
+      lowerIsBetter: true,
     },
     {
-      name: 'Memory: Heap Total at startup',
-      msvc: msvcHeapTotal, clang: clangHeapTotal,
-      msvcFmt: formatBytes(msvcHeapTotal), clangFmt: formatBytes(clangHeapTotal),
-      msvcStd: formatBytes(stddev(msvcHeapTotalArr)), clangStd: formatBytes(stddev(clangHeapTotalArr)),
-      diff: pctDiff(msvcHeapTotal, clangHeapTotal), winner: winner(msvcHeapTotal, clangHeapTotal, true, stddev(msvcHeapTotalArr), stddev(clangHeapTotalArr)),
-      unit: 'bytes', lowerIsBetter: true,
+      name: "Memory: Heap Total at startup",
+      a: aHeapTotal,
+      b: bHeapTotal,
+      aFmt: formatBytes(aHeapTotal),
+      bFmt: formatBytes(bHeapTotal),
+      aStd: formatBytes(stddev(aHeapTotalArr)),
+      bStd: formatBytes(stddev(bHeapTotalArr)),
+      diff: pctDiff(aHeapTotal, bHeapTotal),
+      winner: winner(
+        aHeapTotal,
+        bHeapTotal,
+        true,
+        stddev(aHeapTotalArr),
+        stddev(bHeapTotalArr),
+      ),
+      unit: "bytes",
+      lowerIsBetter: true,
     },
     {
-      name: 'Memory: External at startup',
-      msvc: msvcExternal, clang: clangExternal,
-      msvcFmt: formatBytes(msvcExternal), clangFmt: formatBytes(clangExternal),
-      msvcStd: formatBytes(stddev(msvcExternalArr)), clangStd: formatBytes(stddev(clangExternalArr)),
-      diff: pctDiff(msvcExternal, clangExternal), winner: winner(msvcExternal, clangExternal, true, stddev(msvcExternalArr), stddev(clangExternalArr)),
-      unit: 'bytes', lowerIsBetter: true,
+      name: "Memory: External at startup",
+      a: aExternal,
+      b: bExternal,
+      aFmt: formatBytes(aExternal),
+      bFmt: formatBytes(bExternal),
+      aStd: formatBytes(stddev(aExternalArr)),
+      bStd: formatBytes(stddev(bExternalArr)),
+      diff: pctDiff(aExternal, bExternal),
+      winner: winner(
+        aExternal,
+        bExternal,
+        true,
+        stddev(aExternalArr),
+        stddev(bExternalArr),
+      ),
+      unit: "bytes",
+      lowerIsBetter: true,
     },
   ];
 }
@@ -287,31 +341,31 @@ function benchBufferOps() {
     }
     console.log(performance.now() - start);
   `;
-  const times = { msvc: [], clang: [] };
+  const times = { a: [], b: [] };
 
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', code]);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", code]);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc: msvcR, clang: clangR } = runBothTimed(['-e', code]);
-    const msvcT = parseFloat(msvcR.stdout.trim());
-    const clangT = parseFloat(clangR.stdout.trim());
-    if (!isNaN(msvcT)) times.msvc.push(msvcT);
-    if (!isNaN(clangT)) times.clang.push(clangT);
+    const { a: aR, b: bR } = runBothTimed(["-e", code]);
+    const aT = parseFloat(aR.stdout.trim());
+    const bT = parseFloat(bR.stdout.trim());
+    if (!isNaN(aT)) times.a.push(aT);
+    if (!isNaN(bT)) times.b.push(bT);
   }
 
-  const msvcMed = median(times.msvc);
-  const clangMed = median(times.clang);
+  const medA = median(times.a);
+  const medB = median(times.b);
   return {
-    name: 'Buffer ops (50k alloc+fill+hex)',
-    msvc: msvcMed,
-    clang: clangMed,
-    msvcFmt: formatMs(msvcMed),
-    clangFmt: formatMs(clangMed),
-    msvcStd: formatMs(stddev(times.msvc)),
-    clangStd: formatMs(stddev(times.clang)),
-    diff: pctDiff(msvcMed, clangMed),
-    winner: winner(msvcMed, clangMed, true, stddev(times.msvc), stddev(times.clang)),
-    unit: 'ms',
+    name: "Buffer ops (50k alloc+fill+hex)",
+    a: medA,
+    b: medB,
+    aFmt: formatMs(medA),
+    bFmt: formatMs(medB),
+    aStd: formatMs(stddev(times.a)),
+    bStd: formatMs(stddev(times.b)),
+    diff: pctDiff(medA, medB),
+    winner: winner(medA, medB, true, stddev(times.a), stddev(times.b)),
+    unit: "ms",
     lowerIsBetter: true,
   };
 }
@@ -329,76 +383,78 @@ function benchJSON() {
     }
     console.log(performance.now() - start);
   `;
-  const times = { msvc: [], clang: [] };
+  const times = { a: [], b: [] };
 
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', code]);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", code]);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc: msvcR, clang: clangR } = runBothTimed(['-e', code]);
-    const msvcT = parseFloat(msvcR.stdout.trim());
-    const clangT = parseFloat(clangR.stdout.trim());
-    if (!isNaN(msvcT)) times.msvc.push(msvcT);
-    if (!isNaN(clangT)) times.clang.push(clangT);
+    const { a: aR, b: bR } = runBothTimed(["-e", code]);
+    const aT = parseFloat(aR.stdout.trim());
+    const bT = parseFloat(bR.stdout.trim());
+    if (!isNaN(aT)) times.a.push(aT);
+    if (!isNaN(bT)) times.b.push(bT);
   }
 
-  const msvcMed = median(times.msvc);
-  const clangMed = median(times.clang);
+  const medA = median(times.a);
+  const medB = median(times.b);
   return {
-    name: 'JSON parse+stringify (20k iters)',
-    msvc: msvcMed,
-    clang: clangMed,
-    msvcFmt: formatMs(msvcMed),
-    clangFmt: formatMs(clangMed),
-    msvcStd: formatMs(stddev(times.msvc)),
-    clangStd: formatMs(stddev(times.clang)),
-    diff: pctDiff(msvcMed, clangMed),
-    winner: winner(msvcMed, clangMed, true, stddev(times.msvc), stddev(times.clang)),
-    unit: 'ms',
+    name: "JSON parse+stringify (20k iters)",
+    a: medA,
+    b: medB,
+    aFmt: formatMs(medA),
+    bFmt: formatMs(medB),
+    aStd: formatMs(stddev(times.a)),
+    bStd: formatMs(stddev(times.b)),
+    diff: pctDiff(medA, medB),
+    winner: winner(medA, medB, true, stddev(times.a), stddev(times.b)),
+    unit: "ms",
     lowerIsBetter: true,
   };
 }
 
 function benchFSRead() {
   // Create a temp file, then read it many times
-  const tmpFile = path.join(os.tmpdir(), 'node_bench_test.txt');
-  fs.writeFileSync(tmpFile, 'x'.repeat(64 * 1024)); // 64KB file
+  const tmpFile = path.join(os.tmpdir(), "node_bench_test.txt");
+  fs.writeFileSync(tmpFile, "x".repeat(64 * 1024)); // 64KB file
 
   const code = `
     const { performance } = require('perf_hooks');
     const fs = require('fs');
     const start = performance.now();
     for (let i = 0; i < 5000; i++) {
-      fs.readFileSync(${JSON.stringify(tmpFile.replace(/\\/g, '/'))});
+      fs.readFileSync(${JSON.stringify(tmpFile.replace(/\\/g, "/"))});
     }
     console.log(performance.now() - start);
   `;
-  const times = { msvc: [], clang: [] };
+  const times = { a: [], b: [] };
 
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', code]);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", code]);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc: msvcR, clang: clangR } = runBothTimed(['-e', code]);
-    const msvcT = parseFloat(msvcR.stdout.trim());
-    const clangT = parseFloat(clangR.stdout.trim());
-    if (!isNaN(msvcT)) times.msvc.push(msvcT);
-    if (!isNaN(clangT)) times.clang.push(clangT);
+    const { a: aR, b: bR } = runBothTimed(["-e", code]);
+    const aT = parseFloat(aR.stdout.trim());
+    const bT = parseFloat(bR.stdout.trim());
+    if (!isNaN(aT)) times.a.push(aT);
+    if (!isNaN(bT)) times.b.push(bT);
   }
 
-  try { fs.unlinkSync(tmpFile); } catch {}
+  try {
+    fs.unlinkSync(tmpFile);
+  } catch {}
 
-  const msvcMed = median(times.msvc);
-  const clangMed = median(times.clang);
+  const medA = median(times.a);
+  const medB = median(times.b);
   return {
-    name: 'FS: readFileSync 64KB (5000x)',
-    msvc: msvcMed,
-    clang: clangMed,
-    msvcFmt: formatMs(msvcMed),
-    clangFmt: formatMs(clangMed),
-    msvcStd: formatMs(stddev(times.msvc)),
-    clangStd: formatMs(stddev(times.clang)),
-    diff: pctDiff(msvcMed, clangMed),
-    winner: winner(msvcMed, clangMed, true, stddev(times.msvc), stddev(times.clang)),
-    unit: 'ms',
+    name: "FS: readFileSync 64KB (5000x)",
+    a: medA,
+    b: medB,
+    aFmt: formatMs(medA),
+    bFmt: formatMs(medB),
+    aStd: formatMs(stddev(times.a)),
+    bStd: formatMs(stddev(times.b)),
+    diff: pctDiff(medA, medB),
+    winner: winner(medA, medB, true, stddev(times.a), stddev(times.b)),
+    unit: "ms",
     lowerIsBetter: true,
   };
 }
@@ -420,31 +476,31 @@ function benchURLParsing() {
     }
     console.log(performance.now() - start);
   `;
-  const times = { msvc: [], clang: [] };
+  const times = { a: [], b: [] };
 
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', code]);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", code]);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc: msvcR, clang: clangR } = runBothTimed(['-e', code]);
-    const msvcT = parseFloat(msvcR.stdout.trim());
-    const clangT = parseFloat(clangR.stdout.trim());
-    if (!isNaN(msvcT)) times.msvc.push(msvcT);
-    if (!isNaN(clangT)) times.clang.push(clangT);
+    const { a: aR, b: bR } = runBothTimed(["-e", code]);
+    const aT = parseFloat(aR.stdout.trim());
+    const bT = parseFloat(bR.stdout.trim());
+    if (!isNaN(aT)) times.a.push(aT);
+    if (!isNaN(bT)) times.b.push(bT);
   }
 
-  const msvcMed = median(times.msvc);
-  const clangMed = median(times.clang);
+  const medA = median(times.a);
+  const medB = median(times.b);
   return {
-    name: 'URL parsing (50k, Ada C++)',
-    msvc: msvcMed,
-    clang: clangMed,
-    msvcFmt: formatMs(msvcMed),
-    clangFmt: formatMs(clangMed),
-    msvcStd: formatMs(stddev(times.msvc)),
-    clangStd: formatMs(stddev(times.clang)),
-    diff: pctDiff(msvcMed, clangMed),
-    winner: winner(msvcMed, clangMed, true, stddev(times.msvc), stddev(times.clang)),
-    unit: 'ms',
+    name: "URL parsing (50k, Ada C++)",
+    a: medA,
+    b: medB,
+    aFmt: formatMs(medA),
+    bFmt: formatMs(medB),
+    aStd: formatMs(stddev(times.a)),
+    bStd: formatMs(stddev(times.b)),
+    diff: pctDiff(medA, medB),
+    winner: winner(medA, medB, true, stddev(times.a), stddev(times.b)),
+    unit: "ms",
     lowerIsBetter: true,
   };
 }
@@ -462,31 +518,31 @@ function benchZlib() {
     }
     console.log(performance.now() - start);
   `;
-  const times = { msvc: [], clang: [] };
+  const times = { a: [], b: [] };
 
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', code]);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", code]);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc: msvcR, clang: clangR } = runBothTimed(['-e', code]);
-    const msvcT = parseFloat(msvcR.stdout.trim());
-    const clangT = parseFloat(clangR.stdout.trim());
-    if (!isNaN(msvcT)) times.msvc.push(msvcT);
-    if (!isNaN(clangT)) times.clang.push(clangT);
+    const { a: aR, b: bR } = runBothTimed(["-e", code]);
+    const aT = parseFloat(aR.stdout.trim());
+    const bT = parseFloat(bR.stdout.trim());
+    if (!isNaN(aT)) times.a.push(aT);
+    if (!isNaN(bT)) times.b.push(bT);
   }
 
-  const msvcMed = median(times.msvc);
-  const clangMed = median(times.clang);
+  const medA = median(times.a);
+  const medB = median(times.b);
   return {
-    name: 'Zlib deflate+inflate 64KB (500x)',
-    msvc: msvcMed,
-    clang: clangMed,
-    msvcFmt: formatMs(msvcMed),
-    clangFmt: formatMs(clangMed),
-    msvcStd: formatMs(stddev(times.msvc)),
-    clangStd: formatMs(stddev(times.clang)),
-    diff: pctDiff(msvcMed, clangMed),
-    winner: winner(msvcMed, clangMed, true, stddev(times.msvc), stddev(times.clang)),
-    unit: 'ms',
+    name: "Zlib deflate+inflate 64KB (500x)",
+    a: medA,
+    b: medB,
+    aFmt: formatMs(medA),
+    bFmt: formatMs(medB),
+    aStd: formatMs(stddev(times.a)),
+    bStd: formatMs(stddev(times.b)),
+    diff: pctDiff(medA, medB),
+    winner: winner(medA, medB, true, stddev(times.a), stddev(times.b)),
+    unit: "ms",
     lowerIsBetter: true,
   };
 }
@@ -505,31 +561,31 @@ function benchTextCodec() {
     }
     console.log(performance.now() - start);
   `;
-  const times = { msvc: [], clang: [] };
+  const times = { a: [], b: [] };
 
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', code]);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", code]);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc: msvcR, clang: clangR } = runBothTimed(['-e', code]);
-    const msvcT = parseFloat(msvcR.stdout.trim());
-    const clangT = parseFloat(clangR.stdout.trim());
-    if (!isNaN(msvcT)) times.msvc.push(msvcT);
-    if (!isNaN(clangT)) times.clang.push(clangT);
+    const { a: aR, b: bR } = runBothTimed(["-e", code]);
+    const aT = parseFloat(aR.stdout.trim());
+    const bT = parseFloat(bR.stdout.trim());
+    if (!isNaN(aT)) times.a.push(aT);
+    if (!isNaN(bT)) times.b.push(bT);
   }
 
-  const msvcMed = median(times.msvc);
-  const clangMed = median(times.clang);
+  const medA = median(times.a);
+  const medB = median(times.b);
   return {
-    name: 'TextEncoder/Decoder (10k iters)',
-    msvc: msvcMed,
-    clang: clangMed,
-    msvcFmt: formatMs(msvcMed),
-    clangFmt: formatMs(clangMed),
-    msvcStd: formatMs(stddev(times.msvc)),
-    clangStd: formatMs(stddev(times.clang)),
-    diff: pctDiff(msvcMed, clangMed),
-    winner: winner(msvcMed, clangMed, true, stddev(times.msvc), stddev(times.clang)),
-    unit: 'ms',
+    name: "TextEncoder/Decoder (10k iters)",
+    a: medA,
+    b: medB,
+    aFmt: formatMs(medA),
+    bFmt: formatMs(medB),
+    aStd: formatMs(stddev(times.a)),
+    bStd: formatMs(stddev(times.b)),
+    diff: pctDiff(medA, medB),
+    winner: winner(medA, medB, true, stddev(times.a), stddev(times.b)),
+    unit: "ms",
     lowerIsBetter: true,
   };
 }
@@ -560,31 +616,31 @@ function benchStreamPipe() {
       src.end();
     }
   `;
-  const times = { msvc: [], clang: [] };
+  const times = { a: [], b: [] };
 
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', code]);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", code]);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc: msvcR, clang: clangR } = runBothTimed(['-e', code]);
-    const msvcT = parseFloat(msvcR.stdout.trim());
-    const clangT = parseFloat(clangR.stdout.trim());
-    if (!isNaN(msvcT)) times.msvc.push(msvcT);
-    if (!isNaN(clangT)) times.clang.push(clangT);
+    const { a: aR, b: bR } = runBothTimed(["-e", code]);
+    const aT = parseFloat(aR.stdout.trim());
+    const bT = parseFloat(bR.stdout.trim());
+    if (!isNaN(aT)) times.a.push(aT);
+    if (!isNaN(bT)) times.b.push(bT);
   }
 
-  const msvcMed = median(times.msvc);
-  const clangMed = median(times.clang);
+  const medA = median(times.a);
+  const medB = median(times.b);
   return {
-    name: 'Stream pipe 3-chain (200x100 16KB)',
-    msvc: msvcMed,
-    clang: clangMed,
-    msvcFmt: formatMs(msvcMed),
-    clangFmt: formatMs(clangMed),
-    msvcStd: formatMs(stddev(times.msvc)),
-    clangStd: formatMs(stddev(times.clang)),
-    diff: pctDiff(msvcMed, clangMed),
-    winner: winner(msvcMed, clangMed, true, stddev(times.msvc), stddev(times.clang)),
-    unit: 'ms',
+    name: "Stream pipe 3-chain (200x100 16KB)",
+    a: medA,
+    b: medB,
+    aFmt: formatMs(medA),
+    bFmt: formatMs(medB),
+    aStd: formatMs(stddev(times.a)),
+    bStd: formatMs(stddev(times.b)),
+    diff: pctDiff(medA, medB),
+    winner: winner(medA, medB, true, stddev(times.a), stddev(times.b)),
+    unit: "ms",
     lowerIsBetter: true,
   };
 }
@@ -597,87 +653,124 @@ function benchMemoryHeavy() {
     console.log(JSON.stringify(m));
   `;
 
-  const msvcMem = [];
-  const clangMem = [];
+  const memA = [];
+  const memB = [];
 
-  for (let i = 0; i < WARMUP; i++) runBothTimed(['-e', code]);
+  for (let i = 0; i < WARMUP; i++) runBothTimed(["-e", code]);
 
   for (let i = 0; i < ITERATIONS; i++) {
-    const { msvc: msvcR, clang: clangR } = runBothTimed(['-e', code]);
-    try { msvcMem.push(JSON.parse(msvcR.stdout.trim())); } catch {}
-    try { clangMem.push(JSON.parse(clangR.stdout.trim())); } catch {}
+    const { a: aR, b: bR } = runBothTimed(["-e", code]);
+    try {
+      memA.push(JSON.parse(aR.stdout.trim()));
+    } catch {}
+    try {
+      memB.push(JSON.parse(bR.stdout.trim()));
+    } catch {}
   }
 
-  const msvcRSS = median(msvcMem.map(m => m.rss));
-  const clangRSS = median(clangMem.map(m => m.rss));
-  const msvcHeap = median(msvcMem.map(m => m.heapUsed));
-  const clangHeap = median(clangMem.map(m => m.heapUsed));
+  const aRSS = median(memA.map((m) => m.rss));
+  const bRSS = median(memB.map((m) => m.rss));
+  const aHeap = median(memA.map((m) => m.heapUsed));
+  const bHeap = median(memB.map((m) => m.heapUsed));
 
-  const msvcRSSArr = msvcMem.map(m => m.rss);
-  const clangRSSArr = clangMem.map(m => m.rss);
-  const msvcHeapArr = msvcMem.map(m => m.heapUsed);
-  const clangHeapArr = clangMem.map(m => m.heapUsed);
+  const aRSSArr = memA.map((m) => m.rss);
+  const bRSSArr = memB.map((m) => m.rss);
+  const aHeapArr = memA.map((m) => m.heapUsed);
+  const bHeapArr = memB.map((m) => m.heapUsed);
 
   return [
     {
-      name: 'Memory: RSS under 500k objects',
-      msvc: msvcRSS, clang: clangRSS,
-      msvcFmt: formatBytes(msvcRSS), clangFmt: formatBytes(clangRSS),
-      msvcStd: formatBytes(stddev(msvcRSSArr)), clangStd: formatBytes(stddev(clangRSSArr)),
-      diff: pctDiff(msvcRSS, clangRSS), winner: winner(msvcRSS, clangRSS, true, stddev(msvcRSSArr), stddev(clangRSSArr)),
-      unit: 'bytes', lowerIsBetter: true,
+      name: "Memory: RSS under 500k objects",
+      a: aRSS,
+      b: bRSS,
+      aFmt: formatBytes(aRSS),
+      bFmt: formatBytes(bRSS),
+      aStd: formatBytes(stddev(aRSSArr)),
+      bStd: formatBytes(stddev(bRSSArr)),
+      diff: pctDiff(aRSS, bRSS),
+      winner: winner(aRSS, bRSS, true, stddev(aRSSArr), stddev(bRSSArr)),
+      unit: "bytes",
+      lowerIsBetter: true,
     },
     {
-      name: 'Memory: Heap Used under 500k objects',
-      msvc: msvcHeap, clang: clangHeap,
-      msvcFmt: formatBytes(msvcHeap), clangFmt: formatBytes(clangHeap),
-      msvcStd: formatBytes(stddev(msvcHeapArr)), clangStd: formatBytes(stddev(clangHeapArr)),
-      diff: pctDiff(msvcHeap, clangHeap), winner: winner(msvcHeap, clangHeap, true, stddev(msvcHeapArr), stddev(clangHeapArr)),
-      unit: 'bytes', lowerIsBetter: true,
+      name: "Memory: Heap Used under 500k objects",
+      a: aHeap,
+      b: bHeap,
+      aFmt: formatBytes(aHeap),
+      bFmt: formatBytes(bHeap),
+      aStd: formatBytes(stddev(aHeapArr)),
+      bStd: formatBytes(stddev(bHeapArr)),
+      diff: pctDiff(aHeap, bHeap),
+      winner: winner(aHeap, bHeap, true, stddev(aHeapArr), stddev(bHeapArr)),
+      unit: "bytes",
+      lowerIsBetter: true,
     },
   ];
 }
 
 function benchVersionInfo() {
-  const msvcVersion = execFileSync(MSVC_BIN, ['--version'], { encoding: 'utf8' }).trim();
-  const clangVersion = execFileSync(CLANG_BIN, ['--version'], { encoding: 'utf8' }).trim();
-  const msvcV8 = execFileSync(MSVC_BIN, ['-e', 'console.log(process.versions.v8)'], { encoding: 'utf8' }).trim();
-  const clangV8 = execFileSync(CLANG_BIN, ['-e', 'console.log(process.versions.v8)'], { encoding: 'utf8' }).trim();
-  return { msvcVersion, clangVersion, msvcV8, clangV8 };
+  const versionA = execFileSync(BIN_A, ["--version"], {
+    encoding: "utf8",
+  }).trim();
+  const versionB = execFileSync(BIN_B, ["--version"], {
+    encoding: "utf8",
+  }).trim();
+  const v8A = execFileSync(BIN_A, ["-e", "console.log(process.versions.v8)"], {
+    encoding: "utf8",
+  }).trim();
+  const v8B = execFileSync(BIN_B, ["-e", "console.log(process.versions.v8)"], {
+    encoding: "utf8",
+  }).trim();
+  return { versionA, versionB, v8A, v8B };
 }
 
 // ─── Runner ────────────────────────────────────────────────────────────────────
 
 function printTable(results) {
-  const colWidths = { name: 40, msvc: 18, clang: 18, diff: 12, winner: 10 };
-  const sep = '-'.repeat(colWidths.name + colWidths.msvc + colWidths.clang + colWidths.diff + colWidths.winner + 12);
+  const nameColW = 40;
+  const valueColW = 18;
+  const diffColW = 12;
+  const winnerColW = Math.max(10, NAME_A.length + 2, NAME_B.length + 2);
+  const sep = "-".repeat(nameColW + valueColW * 2 + diffColW + winnerColW + 12);
 
   console.log(sep);
   console.log(
-    '| ' + 'Benchmark'.padEnd(colWidths.name) +
-    '| ' + 'MSVC'.padEnd(colWidths.msvc) +
-    '| ' + 'ClangCL'.padEnd(colWidths.clang) +
-    '| ' + 'Diff'.padEnd(colWidths.diff) +
-    '| ' + 'Winner'.padEnd(colWidths.winner) + '|'
+    "| " +
+      "Benchmark".padEnd(nameColW) +
+      "| " +
+      NAME_A.padEnd(valueColW) +
+      "| " +
+      NAME_B.padEnd(valueColW) +
+      "| " +
+      "Diff".padEnd(diffColW) +
+      "| " +
+      "Winner".padEnd(winnerColW) +
+      "|",
   );
   console.log(sep);
 
   for (const r of results) {
-    const msvcStr = r.msvcStd ? `${r.msvcFmt} ±${r.msvcStd}` : r.msvcFmt;
-    const clangStr = r.clangStd ? `${r.clangFmt} ±${r.clangStd}` : r.clangFmt;
+    const aStr = r.aStd ? `${r.aFmt} ±${r.aStd}` : r.aFmt;
+    const bStr = r.bStd ? `${r.bFmt} ±${r.bStd}` : r.bFmt;
     console.log(
-      '| ' + r.name.padEnd(colWidths.name) +
-      '| ' + msvcStr.padEnd(colWidths.msvc) +
-      '| ' + clangStr.padEnd(colWidths.clang) +
-      '| ' + r.diff.padEnd(colWidths.diff) +
-      '| ' + r.winner.padEnd(colWidths.winner) + '|'
+      "| " +
+        r.name.padEnd(nameColW) +
+        "| " +
+        aStr.padEnd(valueColW) +
+        "| " +
+        bStr.padEnd(valueColW) +
+        "| " +
+        r.diff.padEnd(diffColW) +
+        "| " +
+        r.winner.padEnd(winnerColW) +
+        "|",
     );
   }
   console.log(sep);
 }
 
 async function main() {
-  console.log('=== Node.js Binary Benchmark: MSVC vs ClangCL ===\n');
+  console.log(`=== Node.js Binary Benchmark: ${NAME_A} vs ${NAME_B} ===\n`);
   console.log(`Platform: ${os.platform()} ${os.arch()}`);
   console.log(`CPUs: ${os.cpus()[0].model} (${os.cpus().length} cores)`);
   console.log(`RAM: ${formatBytes(os.totalmem())}`);
@@ -686,26 +779,26 @@ async function main() {
 
   // Version info
   const vinfo = benchVersionInfo();
-  console.log(`MSVC binary  : ${MSVC_BIN}`);
-  console.log(`  Node version: ${vinfo.msvcVersion}, V8: ${vinfo.msvcV8}`);
-  console.log(`ClangCL binary: ${CLANG_BIN}`);
-  console.log(`  Node version: ${vinfo.clangVersion}, V8: ${vinfo.clangV8}\n`);
+  console.log(`${NAME_A} binary: ${BIN_A}`);
+  console.log(`  Node version: ${vinfo.versionA}, V8: ${vinfo.v8A}`);
+  console.log(`${NAME_B} binary: ${BIN_B}`);
+  console.log(`  Node version: ${vinfo.versionB}, V8: ${vinfo.v8B}\n`);
 
   const allResults = [];
   const benchmarks = [
-    { name: 'Binary Size',           fn: benchBinarySize },
-    { name: 'Startup Time',          fn: benchStartupTime },
-    { name: 'require("fs")',         fn: benchRequireFS },
-    { name: 'Require 10 modules',    fn: benchRequireHeavy },
-    { name: 'Memory at Startup',     fn: benchMemoryStartup },
-    { name: 'Buffer Operations',     fn: benchBufferOps },
-    { name: 'JSON parse/stringify',  fn: benchJSON },
-    { name: 'URL parsing (Ada)',     fn: benchURLParsing },
-    { name: 'Zlib compress/decomp',  fn: benchZlib },
-    { name: 'TextEncoder/Decoder',   fn: benchTextCodec },
-    { name: 'Stream pipe throughput', fn: benchStreamPipe },
-    { name: 'FS readFileSync',       fn: benchFSRead },
-    { name: 'Memory under load',     fn: benchMemoryHeavy },
+    { name: "Binary Size", fn: benchBinarySize },
+    { name: "Startup Time", fn: benchStartupTime },
+    { name: 'require("fs")', fn: benchRequireFS },
+    { name: "Require 10 modules", fn: benchRequireHeavy },
+    { name: "Memory at Startup", fn: benchMemoryStartup },
+    { name: "Buffer Operations", fn: benchBufferOps },
+    { name: "JSON parse/stringify", fn: benchJSON },
+    { name: "URL parsing (Ada)", fn: benchURLParsing },
+    { name: "Zlib compress/decomp", fn: benchZlib },
+    { name: "TextEncoder/Decoder", fn: benchTextCodec },
+    { name: "Stream pipe throughput", fn: benchStreamPipe },
+    { name: "FS readFileSync", fn: benchFSRead },
+    { name: "Memory under load", fn: benchMemoryHeavy },
   ];
 
   for (const bench of benchmarks) {
@@ -716,28 +809,39 @@ async function main() {
     } else {
       allResults.push(result);
     }
-    console.log(' done');
+    console.log(" done");
   }
 
-  console.log('\n');
+  console.log("\n");
   printTable(allResults);
 
   // Summary — wins are weighted by the magnitude of the percentage difference
   // so a 10% gap counts 10x more than a 1% gap.
-  let msvcWins = 0, clangWins = 0, ties = 0;
-  let msvcAdvantage = 0, clangAdvantage = 0;
+  let winsA = 0,
+    winsB = 0,
+    ties = 0;
+  let advA = 0,
+    advB = 0;
   for (const r of allResults) {
-    const pct = r.msvc > 0 ? Math.abs(((r.clang - r.msvc) / r.msvc) * 100) : 0;
-    if (r.winner === 'MSVC')        { msvcWins++;  msvcAdvantage  += pct; }
-    else if (r.winner === 'ClangCL') { clangWins++; clangAdvantage += pct; }
-    else ties++;
+    const pct = r.a > 0 ? Math.abs(((r.b - r.a) / r.a) * 100) : 0;
+    if (r.winner === NAME_A) {
+      winsA++;
+      advA += pct;
+    } else if (r.winner === NAME_B) {
+      winsB++;
+      advB += pct;
+    } else ties++;
   }
-  const totalAdv = msvcAdvantage + clangAdvantage;
-  const msvcShare  = totalAdv > 0 ? (msvcAdvantage  / totalAdv * 100).toFixed(1) : '50.0';
-  const clangShare = totalAdv > 0 ? (clangAdvantage / totalAdv * 100).toFixed(1) : '50.0';
-  const overallWinner = msvcAdvantage > clangAdvantage ? 'MSVC' : clangAdvantage > msvcAdvantage ? 'ClangCL' : 'Tie';
-  console.log(`\nWin count  : MSVC ${msvcWins}, ClangCL ${clangWins}, Ties ${ties} (out of ${allResults.length} benchmarks)`);
-  console.log(`Pct advantage: MSVC ${msvcAdvantage.toFixed(2)}% (${msvcShare}%), ClangCL ${clangAdvantage.toFixed(2)}% (${clangShare}%)`);
+  const totalAdv = advA + advB;
+  const shareA = totalAdv > 0 ? ((advA / totalAdv) * 100).toFixed(1) : "50.0";
+  const shareB = totalAdv > 0 ? ((advB / totalAdv) * 100).toFixed(1) : "50.0";
+  const overallWinner = advA > advB ? NAME_A : advB > advA ? NAME_B : "Tie";
+  console.log(
+    `\nWin count  : ${NAME_A} ${winsA}, ${NAME_B} ${winsB}, Ties ${ties} (out of ${allResults.length} benchmarks)`,
+  );
+  console.log(
+    `Pct advantage: ${NAME_A} ${advA.toFixed(2)}% (${shareA}%), ${NAME_B} ${advB.toFixed(2)}% (${shareB}%)`,
+  );
   console.log(`Overall winner by weighted advantage: ${overallWinner}\n`);
 }
 
