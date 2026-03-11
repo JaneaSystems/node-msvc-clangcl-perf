@@ -45,8 +45,8 @@ function getBinaryName(binPath) {
 const NAMES = BINS.map(getBinaryName);
 const N = BINS.length;
 
-const ITERATIONS = 30; // per benchmark
-const WARMUP = 10;
+const ITERATIONS = 2; // per benchmark
+const WARMUP = 1;
 
 // ─── Runner ────────────────────────────────────────────────────────────────────
 
