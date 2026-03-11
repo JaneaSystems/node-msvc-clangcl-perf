@@ -62,11 +62,19 @@ function pickWinner(names, values, lowerIsBetter = true, rawStds = null) {
   }
   if (rawStds) {
     const best = values[bestIdx];
+    // For N>2: ~Tie only when ALL non-best overlap with best.
+    // For N=2: same effect (one pair to check).
+    let allOverlap = true;
     for (let i = 0; i < values.length; i++) {
       if (i === bestIdx) continue;
-      if (Math.abs(values[i] - best) < Math.max(rawStds[bestIdx], rawStds[i]))
-        return "~Tie";
+      if (
+        Math.abs(values[i] - best) >= Math.max(rawStds[bestIdx], rawStds[i])
+      ) {
+        allOverlap = false;
+        break;
+      }
     }
+    if (allOverlap) return "~Tie";
   }
   if (values.every((v) => v === values[bestIdx])) return "Tie";
   return names[bestIdx];

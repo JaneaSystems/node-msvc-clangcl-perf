@@ -88,9 +88,9 @@ const ctx = { runAll: runAllRandomized, BINS, NAMES, N, WARMUP, ITERATIONS };
 
 // ─── Output ────────────────────────────────────────────────────────────────────
 
-// Column widths — per-binary value column is wide enough for "XX.XX ms ±XX.XX ms"
+// Column widths — value column fits "XXXX.XX ms ±XX.XX ms (+XX.XX%)"
 const BENCH_COL_W = 42;
-const VALUE_COL_W = 22;
+const VALUE_COL_W = 34;
 
 function printTable(results) {
   const maxNameLen = Math.max(8, ...NAMES.map((n) => n.length + 2));
@@ -106,9 +106,29 @@ function printTable(results) {
   console.log(sep);
 
   for (const r of results) {
+    // Find the best value for this row
+    let bestIdx = 0;
+    for (let i = 1; i < N; i++) {
+      if (
+        r.lowerIsBetter
+          ? r.values[i] < r.values[bestIdx]
+          : r.values[i] > r.values[bestIdx]
+      )
+        bestIdx = i;
+    }
+
     let row = "| " + r.name.padEnd(BENCH_COL_W);
     for (let i = 0; i < N; i++) {
-      const cell = r.stds ? `${r.fmts[i]} ±${r.stds[i]}` : r.fmts[i];
+      const base = r.stds ? `${r.fmts[i]} ±${r.stds[i]}` : r.fmts[i];
+      let cell;
+      if (i === bestIdx || r.values[i] === r.values[bestIdx]) {
+        cell = base;
+      } else {
+        const best = r.values[bestIdx];
+        const pct =
+          best > 0 ? (((r.values[i] - best) / best) * 100).toFixed(2) : "0.00";
+        cell = `${base} (+${pct}%)`;
+      }
       row += "| " + cell.padEnd(VALUE_COL_W);
     }
     row += "| " + r.winner.padEnd(winnerColW) + "|";
