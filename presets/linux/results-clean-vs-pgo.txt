@@ -1,0 +1,53 @@
+=== Node.js Binary Benchmark: node_clean vs node_pgo ===
+
+Platform: linux x64
+CPUs: 12th Gen Intel(R) Core(TM) i7-12700H (8 cores)
+RAM: 7893.84 MB
+Date: 2026-03-13T12:27:39.107Z
+Iterations per benchmark: 30 (warmup: 10)
+
+node_clean binary: /mnt/hgfs/work/_internal/node-msvc-clangcl-perf/presets/linux/node_clean
+  Node version: v26.0.0-pre, V8: 14.3.127.18-node.12
+node_pgo binary: /mnt/hgfs/work/_internal/node-msvc-clangcl-perf/presets/linux/node_pgo
+  Node version: v26.0.0-pre, V8: 14.3.127.18-node.12
+
+Running: Binary Size... done
+Running: Startup Time... done
+Running: require("fs")... done
+Running: Require 10 modules... done
+Running: Memory at Startup... done
+Running: Buffer Operations... done
+Running: JSON parse/stringify... done
+Running: URL parsing (Ada)... done
+Running: Zlib compress/decomp... done
+Running: TextEncoder/Decoder... done
+Running: Stream pipe throughput... done
+Running: FS readFileSync... done
+Running: Memory under load... done
+
+
+----------------------------------------------------------------------------------------------------------------------------------
+| Benchmark                                 | node_clean                | node_pgo                  | Diff        | Winner      |
+----------------------------------------------------------------------------------------------------------------------------------
+| Binary Size                               | 136.26 MB                 | 125.89 MB                 | -7.61%      | node_pgo    |
+| Startup Time (node -e "0")                | 223.71 ms ±6.53 ms        | 189.26 ms ±7.48 ms        | -15.40%     | node_pgo    |
+| require("fs") + exit                      | 240.42 ms ±46.46 ms       | 195.46 ms ±31.84 ms       | -18.70%     | ~Tie        |
+| Require 10 core modules                   | 271.04 ms ±6.81 ms        | 226.03 ms ±12.47 ms       | -16.61%     | node_pgo    |
+| Memory: RSS at startup                    | 30.43 MB ±60.49 KB        | 27.35 MB ±79.93 KB        | -10.12%     | node_pgo    |
+| Memory: Heap Used at startup              | 3.65 MB ±0 B              | 3.65 MB ±0 B              | -0.00%      | node_pgo    |
+| Memory: Heap Total at startup             | 4.63 MB ±0 B              | 4.63 MB ±0 B              | 0.00%       | Tie         |
+| Memory: External at startup               | 1.36 MB ±0 B              | 1.36 MB ±0 B              | 0.00%       | Tie         |
+| Buffer ops (50k alloc+fill+hex)           | 166.68 ms ±8.90 ms        | 152.96 ms ±13.08 ms       | -8.23%      | node_pgo    |
+| JSON parse+stringify (20k iters)          | 2516.43 ms ±151.77 ms     | 2198.87 ms ±128.80 ms     | -12.62%     | node_pgo    |
+| URL parsing (50k, Ada C++)                | 60.70 ms ±6.88 ms         | 48.55 ms ±3.98 ms         | -20.01%     | node_pgo    |
+| Zlib deflate+inflate 64KB (500x)          | 178.54 ms ±11.07 ms       | 174.88 ms ±6.60 ms        | -2.05%      | ~Tie        |
+| TextEncoder/Decoder (10k iters)           | 268.31 ms ±9.01 ms        | 325.80 ms ±13.11 ms       | +21.43%     | node_clean  |
+| Stream pipe 3-chain (200x100 16KB)        | 95.90 ms ±7.62 ms         | 81.38 ms ±7.12 ms         | -15.14%     | node_pgo    |
+| FS: readFileSync 64KB (5000x)             | 274.17 ms ±19.03 ms       | 265.08 ms ±17.18 ms       | -3.31%      | ~Tie        |
+| Memory: RSS under 500k objects            | 163.69 MB ±290.96 KB      | 157.79 MB ±487.49 KB      | -3.60%      | node_pgo    |
+| Memory: Heap Used under 500k objects      | 84.90 MB ±42.70 KB        | 84.85 MB ±16.37 KB        | -0.06%      | node_pgo    |
+----------------------------------------------------------------------------------------------------------------------------------
+
+Win count  : node_clean 1, node_pgo 11, Ties 5 (out of 17 benchmarks)
+Pct advantage: node_clean 21.43% (16.4%), node_pgo 109.39% (83.6%)
+Overall winner by weighted advantage: node_pgo

@@ -82,8 +82,8 @@ const ctx = {
 // ─── Runner ────────────────────────────────────────────────────────────────────
 
 function printTable(results) {
-  const nameColW = 40;
-  const valueColW = 18;
+  const nameColW = 42;
+  const valueColW = 26;
   const diffColW = 12;
   const winnerColW = Math.max(10, NAME_A.length + 2, NAME_B.length + 2);
   const sep = "-".repeat(nameColW + valueColW * 2 + diffColW + winnerColW + 12);
@@ -91,16 +91,16 @@ function printTable(results) {
   console.log(sep);
   console.log(
     "| " +
-      "Benchmark".padEnd(nameColW) +
-      "| " +
-      NAME_A.padEnd(valueColW) +
-      "| " +
-      NAME_B.padEnd(valueColW) +
-      "| " +
-      "Diff".padEnd(diffColW) +
-      "| " +
-      "Winner".padEnd(winnerColW) +
-      "|",
+    "Benchmark".padEnd(nameColW) +
+    "| " +
+    NAME_A.padEnd(valueColW) +
+    "| " +
+    NAME_B.padEnd(valueColW) +
+    "| " +
+    "Diff".padEnd(diffColW) +
+    "| " +
+    "Winner".padEnd(winnerColW) +
+    "|",
   );
   console.log(sep);
 
@@ -110,16 +110,16 @@ function printTable(results) {
     const diff = pctDiff(r.values[0], r.values[1]);
     console.log(
       "| " +
-        r.name.padEnd(nameColW) +
-        "| " +
-        aStr.padEnd(valueColW) +
-        "| " +
-        bStr.padEnd(valueColW) +
-        "| " +
-        diff.padEnd(diffColW) +
-        "| " +
-        r.winner.padEnd(winnerColW) +
-        "|",
+      r.name.padEnd(nameColW) +
+      "| " +
+      aStr.padEnd(valueColW) +
+      "| " +
+      bStr.padEnd(valueColW) +
+      "| " +
+      diff.padEnd(diffColW) +
+      "| " +
+      r.winner.padEnd(winnerColW) +
+      "|",
     );
   }
   console.log(sep);

@@ -34,7 +34,8 @@ Presets are self-contained benchmark configurations inside `presets/<name>/`. Ea
 
 | Preset | Description |
 |---|---|
-| `msvc-vs-clangcl` | Compares MSVC-compiled vs ClangCL-compiled Node.js binaries. |
+| `msvc-vs-clangcl` | Compares MSVC-compiled vs ClangCL-compiled Node.js binaries (Windows). |
+| `linux` | Compares clean, LTO, PGO, and LTO+PGO Node.js builds (Linux). |
 
 ### Running a preset
 
