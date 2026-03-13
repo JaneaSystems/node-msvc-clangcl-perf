@@ -17,17 +17,37 @@ Benchmarks two or more Node.js binaries against each other across startup time, 
 node benchmark_compare.js <path/to/binary-a> <path/to/binary-b>
 ```
 
-Or use the included batch script (compares the two pre-built binaries in this repo):
-
-```bat
-run_benchmark.bat
-```
-
 ### Three or more binaries
 
 ```sh
 node benchmark_compare_multiple.js <bin1> <bin2> <bin3> [...]
 ```
+
+## Presets
+
+Presets are self-contained benchmark configurations inside `presets/<name>/`. Each subfolder contains:
+
+- The binary `.exe` files to compare.
+- A `run.bat` (Windows) or `run.sh` (Linux) script that executes the benchmark.
+
+### Available presets
+
+| Preset | Description |
+|---|---|
+| `msvc-vs-clangcl` | Compares MSVC-compiled vs ClangCL-compiled Node.js binaries. |
+
+### Running a preset
+
+```bat
+cd presets\msvc-vs-clangcl
+run.bat
+```
+
+### Creating a new preset
+
+1. Create a subfolder under `presets/` (e.g. `presets/my-test/`).
+2. Place the binaries inside it.
+3. Add a `run.bat` / `run.sh` that `cd`s to its own directory and invokes the benchmark script with the binary names.
 
 ## How it works
 

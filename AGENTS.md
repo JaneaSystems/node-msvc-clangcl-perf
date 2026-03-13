@@ -40,7 +40,11 @@ ALWAYS keep documentation in sync with the code.
 
 ## Core Purpose
 
-<!-- TODO -->
+Benchmark comparison framework for Node.js binaries compiled with different toolchains or configurations.
+
+## Presets
+
+Presets live under `presets/<name>/`. Each preset is a self-contained folder with binaries and a run script (`run.bat` or `run.sh`). The run script should `cd` to its own directory and invoke `benchmark_compare.js` or `benchmark_compare_multiple.js` relative to the project root (e.g. `..\..\benchmark_compare.js`). Example: `presets/msvc-vs-clangcl/run.bat`.
 
 ---
 
