@@ -44,7 +44,7 @@ Benchmark comparison framework for Node.js binaries compiled with different tool
 
 ## Presets
 
-Presets live under `presets/<name>/`. Each preset is a self-contained folder with binaries and a run script (`run.bat` or `run.sh`). The run script should `cd` to its own directory and invoke `benchmark_compare.js` or `benchmark_compare_multiple.js` relative to the project root (e.g. `..\..\benchmark_compare.js`). Example: `presets/msvc-vs-clangcl/run.bat`.
+Presets live under `presets/<name>/`. Each preset is a self-contained folder with binaries and a run script (`run.bat` or `run.sh`). The run script should `cd` to its own directory and invoke `../../index.js` (the root entry point) with the binary paths. Example: `presets/msvc-vs-clangcl/run.bat`.
 
 ---
 

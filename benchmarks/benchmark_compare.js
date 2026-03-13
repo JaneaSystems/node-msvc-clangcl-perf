@@ -35,8 +35,8 @@ const NAME_B = getBinaryName(BIN_B);
 const ITERATIONS = 30; // per benchmark
 const WARMUP = 10;
 
-const { formatBytes, pctDiff } = require("./benchmarks/helpers");
-const { benchmarks, benchVersionInfo } = require("./benchmarks");
+const { formatBytes, pctDiff } = require("./helpers");
+const { benchmarks, benchVersionInfo } = require(".");
 
 // ─── Runner ───────────────────────────────────────────────────────────────────
 

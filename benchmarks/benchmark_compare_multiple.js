@@ -9,8 +9,8 @@ const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
-const { formatBytes } = require("./benchmarks/helpers");
-const { benchmarks, benchVersionInfo } = require("./benchmarks");
+const { formatBytes } = require("./helpers");
+const { benchmarks, benchVersionInfo } = require(".");
 
 const cliArgs = process.argv.slice(2);
 if (cliArgs.length < 2) {
@@ -196,7 +196,7 @@ async function main() {
         : (100 / N).toFixed(1);
     console.log(
       `  ${NAMES[i].padEnd(22)}: ${String(wins[i]).padStart(3)} wins,` +
-        ` ${advPct[i].toFixed(2).padStart(8)}% weighted advantage (${share}% share)`,
+      ` ${advPct[i].toFixed(2).padStart(8)}% weighted advantage (${share}% share)`,
     );
   }
   const overallIdx = advPct.indexOf(Math.max(...advPct));
