@@ -1,0 +1,54 @@
+=== Node.js Binary Benchmark: node_main_ltcg vs node_ltcg_pgo_use ===
+
+Platform: win32 x64
+CPUs: 12th Gen Intel(R) Core(TM) i7-12700H (20 cores)
+RAM: 32458.34 MB
+Date: 2026-03-20T16:53:51.109Z
+Iterations per benchmark: 30 (warmup: 10)
+
+node_main_ltcg binary: C:\_work\_internal\node-msvc-clangcl-perf\presets\windows-pgo\node_main_ltcg.exe
+  Node version: v26.0.0-pre, V8: 14.3.127.18-node.12
+node_ltcg_pgo_use binary: C:\_work\_internal\node-msvc-clangcl-perf\presets\windows-pgo\node_ltcg_pgo_use.exe
+  Node version: v26.0.0-pre, V8: 14.3.127.18-node.12
+
+Running: Binary Size... done
+Running: Startup Time... done
+Running: require("fs")... done
+Running: Require 10 modules... done
+Running: Memory at Startup... done
+Running: Buffer Operations... done
+Running: JSON parse/stringify... done
+Running: URL parsing (Ada)... done
+Running: Zlib compress/decomp... done
+Running: TextEncoder/Decoder... done
+Running: Stream pipe throughput... done
+Running: FS readFileSync... done
+Running: Memory under load... done
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------
+| Benchmark                                 | node_main_ltcg            | node_ltcg_pgo_use         | Diff        | Winner             |
+-----------------------------------------------------------------------------------------------------------------------------------------
+| Binary Size                               | 91.29 MB                  | 88.18 MB                  | -3.41%      | node_ltcg_pgo_use  |
+| Startup Time (node -e "0")                | 41.07 ms ±1.62 ms         | 41.08 ms ±1.54 ms         | +0.02%      | ~Tie               |
+| require("fs") + exit                      | 41.27 ms ±3.10 ms         | 41.31 ms ±1.88 ms         | +0.10%      | ~Tie               |
+| Require 10 core modules                   | 51.17 ms ±1.98 ms         | 50.57 ms ±1.74 ms         | -1.16%      | ~Tie               |
+| Memory: RSS at startup                    | 44.69 MB ±1.18 MB         | 30.15 MB ±51.95 KB        | -32.54%     | node_ltcg_pgo_use  |
+| Memory: Heap Used at startup              | 3.65 MB ±0 B              | 3.65 MB ±0 B              | +0.00%      | ~Tie               |
+| Memory: Heap Total at startup             | 4.63 MB ±140.22 KB        | 4.63 MB ±0 B              | 0.00%       | Tie                |
+| Memory: External at startup               | 1.40 MB ±0 B              | 1.40 MB ±0 B              | +0.00%      | ~Tie               |
+| Buffer ops (50k alloc+fill+hex)           | 56.14 ms ±3.16 ms         | 53.64 ms ±3.20 ms         | -4.46%      | ~Tie               |
+| JSON parse+stringify (20k iters)          | 1801.81 ms ±20.99 ms      | 1297.27 ms ±16.40 ms      | -28.00%     | node_ltcg_pgo_use  |
+| URL parsing (50k, Ada C++)                | 16.37 ms ±1.26 ms         | 12.87 ms ±0.91 ms         | -21.40%     | node_ltcg_pgo_use  |
+| Zlib deflate+inflate 64KB (500x)          | 102.75 ms ±2.50 ms        | 101.72 ms ±3.45 ms        | -1.00%      | ~Tie               |
+| TextEncoder/Decoder (10k iters)           | 154.92 ms ±3.78 ms        | 158.58 ms ±2.44 ms        | +2.36%      | ~Tie               |
+| Stream pipe 3-chain (200x100 16KB)        | 21.93 ms ±1.19 ms         | 20.78 ms ±0.85 ms         | -5.26%      | ~Tie               |
+| FS: readFileSync 64KB (5000x)             | 259.36 ms ±4.91 ms        | 256.06 ms ±4.29 ms        | -1.27%      | ~Tie               |
+| Memory: RSS under 500k objects            | 169.30 MB ±210.69 KB      | 154.46 MB ±220.69 KB      | -8.76%      | node_ltcg_pgo_use  |
+| Memory: Heap Used under 500k objects      | 84.83 MB ±18.87 KB        | 84.83 MB ±24.21 KB        | -0.00%      | ~Tie               |
+-----------------------------------------------------------------------------------------------------------------------------------------
+
+Win count  : node_main_ltcg 0, node_ltcg_pgo_use 5, Ties 12 (out of 17 benchmarks)
+Pct advantage: node_main_ltcg 0.00% (0.0%), node_ltcg_pgo_use 94.10% (100.0%)
+Overall winner by weighted advantage: node_ltcg_pgo_use
+

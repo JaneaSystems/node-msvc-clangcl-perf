@@ -60,6 +60,7 @@ function pickWinner(names, values, lowerIsBetter = true, rawStds = null) {
     )
       bestIdx = i;
   }
+  if (values.every((v) => v === values[bestIdx])) return "Tie";
   if (rawStds) {
     const best = values[bestIdx];
     // For N>2: ~Tie only when ALL non-best overlap with best.
@@ -67,16 +68,19 @@ function pickWinner(names, values, lowerIsBetter = true, rawStds = null) {
     let allOverlap = true;
     for (let i = 0; i < values.length; i++) {
       if (i === bestIdx) continue;
-      if (
-        Math.abs(values[i] - best) >= Math.max(rawStds[bestIdx], rawStds[i])
-      ) {
+      const diff = Math.abs(values[i] - best);
+      const noise = Math.max(rawStds[bestIdx], rawStds[i]);
+      // When stddev is zero (discrete/constant values), use 0.5% of the
+      // larger value as a minimum noise floor so V8 rounding artefacts
+      // (a few bytes, a few µs) don't produce false winners.
+      const floor = noise === 0 ? Math.max(values[i], best) * 0.005 : 0;
+      if (diff > noise + floor) {
         allOverlap = false;
         break;
       }
     }
     if (allOverlap) return "~Tie";
   }
-  if (values.every((v) => v === values[bestIdx])) return "Tie";
   return names[bestIdx];
 }
 
