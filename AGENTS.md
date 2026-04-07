@@ -42,6 +42,13 @@ ALWAYS keep documentation in sync with the code.
 
 Benchmark comparison framework for Node.js binaries compiled with different toolchains or configurations.
 
+## CLI Flags (benchmark_single.js)
+
+- `--benchmark <name>` — run only the named benchmark (exact name from `benchmarks/index.js`).
+- `--list-benchmarks` — print benchmark names and exit.
+
+These flags are passed through from `index.js` (single-binary mode) via `process.argv`.
+
 ## Presets
 
 Presets live under `presets/<name>/`. Each preset is a self-contained folder with binaries and a run script (`run.bat` or `run.sh`). The run script should `cd` to its own directory and invoke `../../index.js` (the root entry point) with the binary paths. Example: `presets/msvc-vs-clangcl/run.bat`.

@@ -9,8 +9,23 @@ Benchmarks two or more Node.js binaries against each other across startup time, 
 | `index.js` | **Entry point.** Routes to pairwise or multi-binary comparison automatically. |
 | `benchmarks/benchmark_compare.js` | Pairwise benchmark — exactly 2 binaries. Includes a Diff % column. |
 | `benchmarks/benchmark_compare_multiple.js` | 2+ binaries. For 2 binaries, delegates to pairwise. For 3+, runs a multi-column table. |
+| `benchmarks/benchmark_single.js` | single binary for capturing a baseline. |
+
 
 ## Usage
+
+### Single binary (baseline)
+
+```sh
+node index.js <binary>
+```
+
+Optional flags (single-binary mode only):
+
+| Flag | Description |
+|---|---|
+| `--benchmark <name>` | Run only the named benchmark (exact match from the list in `benchmarks/index.js`). |
+| `--list-benchmarks` | Print all available benchmark names and exit. |
 
 ### Two or more binaries
 
@@ -31,6 +46,7 @@ Presets are self-contained benchmark configurations inside `presets/<name>/`. Ea
 |---|---|
 | `msvc-vs-clangcl` | Compares MSVC-compiled vs ClangCL-compiled Node.js binaries (Windows). |
 | `linux` | Compares clean, LTO, PGO, and LTO+PGO Node.js builds (Linux). |
+| `wpr-new/node` | Per-benchmark WPR profiling — captures a separate ETL trace for each benchmark (Windows). |
 
 ### Running a preset
 
