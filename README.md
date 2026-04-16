@@ -46,7 +46,7 @@ Presets are self-contained benchmark configurations inside `presets/<name>/`. Ea
 |---|---|
 | `msvc-vs-clangcl` | Compares MSVC-compiled vs ClangCL-compiled Node.js binaries (Windows). |
 | `linux` | Compares clean, LTO, PGO, and LTO+PGO Node.js builds (Linux). |
-| `wpr-new/node` | Per-benchmark WPR profiling — captures a separate ETL trace for each benchmark (Windows). |
+| `wpr/node` | Per-benchmark WPR profiling — captures a separate ETL trace for each benchmark (Windows). |
 
 ### Running a preset
 
