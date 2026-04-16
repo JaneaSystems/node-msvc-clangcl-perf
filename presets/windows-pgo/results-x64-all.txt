@@ -1,0 +1,63 @@
+=== Node.js Binary Benchmark: node_main_ltcg vs node_ltcg_pgo_use vs node_thin_lto_pgo_use vs node_full_lto_pgo_use ===
+
+Platform : win32 x64
+CPUs     : 12th Gen Intel(R) Core(TM) i7-12700H (20 cores)
+RAM      : 32458.34 MB
+Date     : 2026-04-16T18:59:04.236Z
+Binaries : 4
+Iterations per benchmark: 30 (warmup: 10)
+
+node_main_ltcg : C:\_work\_internal\node-msvc-clangcl-perf\presets\windows-pgo\node_main_ltcg.exe
+  Node: v26.0.0-pre, V8: 14.3.127.18-node.12
+node_ltcg_pgo_use : C:\_work\_internal\node-msvc-clangcl-perf\presets\windows-pgo\node_ltcg_pgo_use.exe
+  Node: v26.0.0-pre, V8: 14.3.127.18-node.12
+node_thin_lto_pgo_use : C:\_work\_internal\node-msvc-clangcl-perf\presets\windows-pgo\node_thin_lto_pgo_use.exe
+  Node: v26.0.0-pre, V8: 14.3.127.18-node.12
+node_full_lto_pgo_use : C:\_work\_internal\node-msvc-clangcl-perf\presets\windows-pgo\node_full_lto_pgo_use.exe
+  Node: v26.0.0-pre, V8: 14.3.127.18-node.12
+
+Running: Binary Size... done
+Running: Startup Time... done
+Running: require("fs")... done
+Running: Require 10 modules... done
+Running: Memory at Startup... done
+Running: Buffer Operations... done
+Running: JSON parse/stringify... done
+Running: URL parsing (Ada)... done
+Running: Zlib compress/decomp... done
+Running: TextEncoder/Decoder... done
+Running: Stream pipe throughput... done
+Running: FS readFileSync... done
+Running: Memory under load... done
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Benchmark                                 | node_main_ltcg                    | node_ltcg_pgo_use                 | node_thin_lto_pgo_use             | node_full_lto_pgo_use             | Winner                 |
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+| Binary Size                               | 91.29 MB (+3.53%)                 | 88.18 MB                          | 89.48 MB (+1.47%)                 | 89.31 MB (+1.28%)                 | node_ltcg_pgo_use      |
+| Startup Time (node -e "0")                | 40.31 ms ±1.69 ms                 | 41.43 ms ±2.64 ms (+2.79%)        | 42.05 ms ±2.07 ms (+4.32%)        | 41.56 ms ±2.58 ms (+3.11%)        | ~Tie                   |
+| require("fs") + exit                      | 40.81 ms ±3.16 ms (+1.32%)        | 41.06 ms ±2.13 ms (+1.93%)        | 40.97 ms ±2.92 ms (+1.70%)        | 40.28 ms ±1.92 ms                 | ~Tie                   |
+| Require 10 core modules                   | 49.84 ms ±2.73 ms                 | 50.33 ms ±2.35 ms (+0.99%)        | 49.85 ms ±3.03 ms (+0.02%)        | 49.92 ms ±2.62 ms (+0.16%)        | ~Tie                   |
+| Memory: RSS at startup                    | 47.17 MB ±41.28 KB (+56.74%)      | 30.18 MB ±34.24 KB (+0.29%)       | 30.50 MB ±43.22 KB (+1.35%)       | 30.09 MB ±38.26 KB                | node_full_lto_pgo_use  |
+| Memory: Heap Used at startup              | 3.65 MB ±0 B                      | 3.65 MB ±0 B (+0.00%)             | 3.65 MB ±0 B (+0.01%)             | 3.65 MB ±0 B (+0.01%)             | ~Tie                   |
+| Memory: Heap Total at startup             | 4.63 MB ±0 B (+5.71%)             | 4.63 MB ±0 B (+5.71%)             | 4.38 MB ±0 B                      | 4.38 MB ±0 B                      | node_thin_lto_pgo_use  |
+| Memory: External at startup               | 1.40 MB ±0 B                      | 1.40 MB ±0 B (+0.00%)             | 1.40 MB ±0 B (+0.00%)             | 1.40 MB ±0 B (+0.00%)             | ~Tie                   |
+| Buffer ops (50k alloc+fill+hex)           | 57.38 ms ±3.55 ms (+13.33%)       | 53.65 ms ±2.89 ms (+5.97%)        | 50.63 ms ±2.68 ms                 | 50.64 ms ±3.43 ms (+0.01%)        | node_thin_lto_pgo_use  |
+| JSON parse+stringify (20k iters)          | 1848.91 ms ±20.20 ms (+63.31%)    | 1337.32 ms ±25.83 ms (+18.12%)    | 1219.32 ms ±14.81 ms (+7.70%)     | 1132.13 ms ±16.96 ms              | node_full_lto_pgo_use  |
+| URL parsing (50k, Ada C++)                | 16.78 ms ±1.00 ms (+44.40%)       | 13.58 ms ±1.15 ms (+16.90%)       | 11.62 ms ±0.68 ms                 | 11.65 ms ±0.55 ms (+0.32%)        | node_thin_lto_pgo_use  |
+| Zlib deflate+inflate 64KB (500x)          | 106.28 ms ±2.30 ms (+3.80%)       | 104.23 ms ±2.56 ms (+1.80%)       | 102.39 ms ±2.52 ms                | 103.19 ms ±2.65 ms (+0.78%)       | node_thin_lto_pgo_use  |
+| TextEncoder/Decoder (10k iters)           | 158.78 ms ±3.21 ms (+14.86%)      | 161.56 ms ±3.54 ms (+16.87%)      | 138.24 ms ±3.50 ms                | 143.51 ms ±3.86 ms (+3.81%)       | node_thin_lto_pgo_use  |
+| Stream pipe 3-chain (200x100 16KB)        | 22.47 ms ±1.32 ms (+13.56%)       | 21.43 ms ±1.81 ms (+8.33%)        | 20.18 ms ±1.20 ms (+2.00%)        | 19.79 ms ±1.38 ms                 | node_full_lto_pgo_use  |
+| FS: readFileSync 64KB (5000x)             | 250.95 ms ±6.27 ms (+3.32%)       | 244.78 ms ±5.62 ms (+0.79%)       | 245.14 ms ±5.85 ms (+0.93%)       | 242.88 ms ±6.10 ms                | node_full_lto_pgo_use  |
+| Memory: RSS under 500k objects            | 169.29 MB ±175.11 KB (+9.65%)     | 154.39 MB ±176.69 KB              | 154.74 MB ±171.29 KB (+0.22%)     | 154.49 MB ±211.14 KB (+0.06%)     | node_ltcg_pgo_use      |
+| Memory: Heap Used under 500k objects      | 84.83 MB ±18.82 KB (+0.01%)       | 84.83 MB ±21.50 KB (+0.01%)       | 84.82 MB ±16.35 KB                | 84.82 MB ±20.31 KB (+0.00%)       | ~Tie                   |
+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+Win count (17 benchmarks, 6 statistical ties):
+  node_main_ltcg        :   0 wins,     0.00% weighted advantage (0.0% share)
+  node_ltcg_pgo_use     :   2 wins,    16.21% weighted advantage (5.0% share)
+  node_thin_lto_pgo_use :   5 wins,   134.27% weighted advantage (41.1% share)
+  node_full_lto_pgo_use :   4 wins,   176.43% weighted advantage (54.0% share)
+
+Overall winner by weighted advantage: node_full_lto_pgo_use
+
